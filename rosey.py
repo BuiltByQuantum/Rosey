@@ -4,6 +4,7 @@ from google.cloud import translate_v2 as translate
 import openai
 import time
 import html
+from moviepy.editor import VideoFileClip, AudioFileClip
 from license import OPENAIKEY, ELEVENLABSKEY, GOOGLEKEY
 
 # Set up Google API credentials
@@ -13,12 +14,19 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLEKEY
 openai.api_key = OPENAIKEY
 elevenlabs_api_key = ELEVENLABSKEY
 
-# Function to transcribe audio using OpenAI's API
 def transcribe_audio(file_path):
+    # Check if file is a video file (mov or mp4)
+    if file_path.lower().endswith(('.mp4', '.mov')):
+        video = VideoFileClip(file_path)
+        audio_path = file_path.rsplit(".", 1)[0] + ".wav"  # convert video to audio
+        video.audio.write_audiofile(audio_path)
+        file_path = audio_path  # update file_path to the new audio file
+
     with open(file_path, "rb") as audio_file:
         response = openai.Audio.transcribe("whisper-1", audio_file)
     transcript = response["text"]
     return transcript
+
 
 # Function to detect language of a given text using Google Translate API
 def detect_language(text):
@@ -57,7 +65,7 @@ def clone_voice(name, description, accent, samples):
     return response.json()['voice_id']
 
 # Function to synthesize the provided text using the cloned voice using ElevenLabs API
-def clone_and_synthesize_voice(text, voice_id):
+def clone_and_synthesize_voice(text, voice_id, input_file):
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {
       "Accept": "application/json",
@@ -65,7 +73,7 @@ def clone_and_synthesize_voice(text, voice_id):
     }
     data = {
       "text": text,
-      "model_id": "eleven_monolingual_v1",
+      "model_id": "eleven_multilingual_v1",
       "voice_settings": {
         "stability": 0,
         "similarity_boost": 0
@@ -87,9 +95,14 @@ def clone_and_synthesize_voice(text, voice_id):
             if chunk:
                 f.write(chunk)
 
+ # If the input file is a video file, replace its audio with the new audio
+    if input_file.lower().endswith(('.mp4', '.mov')):
+        video = VideoFileClip(input_file)
+        new_audio = AudioFileClip(output_file)
+        video.set_audio(new_audio).write_videofile(f"translations/translated_video_{timestamp}.mp4", codec="libx264")
+
     # Print the name of the output file
     print(f"Translated audio saved as '{output_file}'")
-
 # Main function to orchestrate the process
 def main():
     # Prompt user to enter the path of an audio file
@@ -129,7 +142,7 @@ def main():
 
     # Synthesize the translated text with the cloned voice
     print("Synthesizing translated audio...")
-    clone_and_synthesize_voice(translated_text, voice_id)
+    clone_and_synthesize_voice(translated_text, voice_id, input_file)
 
 # If the script is run directly (not imported), then run the main function
 if __name__ == "__main__":
