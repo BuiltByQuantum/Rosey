@@ -5,3 +5,5 @@ license.py
 *.mov
 *.mp4
 *.wav
+/.vscode
+/__pycache__
