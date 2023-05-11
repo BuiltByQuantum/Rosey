@@ -27,7 +27,7 @@ pip install requests google-cloud-translate openai
 2. Run the script using Python.
 
 ```python
-python rosey.py.py
+python rosey.py
 ```
 
 3. When prompted, enter the path to your audio file. The audio file should be in mp3, wav, or mp4 format.
